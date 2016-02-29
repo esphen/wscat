@@ -12,10 +12,14 @@
 
 var program = require('commander')
   , readline = require('readline')
+  , ttys = require('ttys')
+  , split = require('split')
   , events = require('events')
   , WebSocket = require('ws')
   , util = require('util')
   , fs = require('fs');
+
+var stdinBuffer = [];
 
 /**
  * InputReader - processes console input.
@@ -26,13 +30,28 @@ function Console() {
   this.stdin = process.stdin;
   this.stdout = process.stdout;
 
-  this.readlineInterface = readline.createInterface(this.stdin, this.stdout);
+  this.readlineInterface = readline.createInterface({
+    input: ttys.stdin,
+    output: ttys.stdout,
+    terminal: true
+  });
 
   var self = this;
 
-  this.readlineInterface.on('line', function line(data) {
-    self.emit('line', data);
-  }).on('close', function close() {
+  function line(data) {
+    if (Array.isArray(stdinBuffer)) {
+      stdinBuffer.push(data);
+    } else {
+      self.emit('line', data);
+    }
+  }
+
+  // Process stdin if provided
+  process.stdin.pipe(split()).on('data', line);
+
+  // Process interactive input
+  this.readlineInterface.on('line', line)
+  .on('close', function close() {
     self.emit('close');
   });
 
@@ -200,6 +219,8 @@ if (program.listen && program.connect) {
   var ws = new WebSocket(connectUrl, options);
 
   ws.on('open', function open() {
+
+    // Print headers if requested
     if (program.head) {
       var headers = ws._socket._httpMessage.res.rawHeaders;
       var i = 0;
@@ -214,11 +235,24 @@ if (program.listen && program.connect) {
 
     wsConsole.print('connected (press CTRL+C to quit)', Console.Colors.Green);
 
-    (program.message || []).forEach(function messager(s) {
+    function sendMessage(s) {
       ws.send(s);
       wsConsole.print('> ' + s);
-    });
+    }
 
+    // Send messages if piped into wscat
+    if (stdinBuffer.length) {
+      stdinBuffer.forEach(sendMessage);
+    }
+
+    // Unset buffer so that all new messages
+    // are processed immediatly
+    stdinBuffer = null;
+
+    // Send messages from opts
+    (program.message || []).forEach(sendMessage);
+
+    // Start interactive prompt
     wsConsole.on('line', function line(data) {
       ws.send(data, { mask: true });
       wsConsole.prompt();

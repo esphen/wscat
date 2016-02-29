@@ -19,7 +19,9 @@
   "license": "MIT",
   "dependencies": {
     "commander": "2.8.x",
+    "split": "^1.0.0",
     "tinycolor": "0.0.x",
+    "ttys": "0.0.3",
     "ws": "0.8.x"
   },
   "bin": {
