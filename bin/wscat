@@ -112,6 +112,7 @@ program
   .option('--host <host>', 'optional host')
   .option('-s, --subprotocol <protocol>', 'optional subprotocol')
   .option('-n, --no-check', 'Do not check for unauthorized certificates')
+  .option('-I, --head', 'Dump headers of HTTP connection. (--connect only)')
   .option('-H, --header <header:value>', 'Set an HTTP header. Repeat to set multiple. (--connect only)', appender(), [])
   .option('--auth <username:password>', 'Add basic HTTP authentication header. (--connect only)')
   .parse(process.argv);
@@ -199,6 +200,18 @@ if (program.listen && program.connect) {
   var ws = new WebSocket(connectUrl, options);
 
   ws.on('open', function open() {
+    if (program.head) {
+      var headers = ws._socket._httpMessage.res.rawHeaders;
+      var i = 0;
+
+      wsConsole.print('wscat response headers');
+      while (i < headers.length) {
+        wsConsole.print(headers[i++] + ': ' + headers[i++]);
+      }
+
+      wsConsole.print('');
+    }
+
     wsConsole.print('connected (press CTRL+C to quit)', Console.Colors.Green);
 
     (program.message || []).forEach(function messager(s) {
