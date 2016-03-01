@@ -225,15 +225,16 @@ if (program.listen && program.connect) {
       var headers = ws._socket._httpMessage.res.rawHeaders;
       var i = 0;
 
-      wsConsole.print('wscat response headers');
-      while (i < headers.length) {
-        wsConsole.print(headers[i++] + ': ' + headers[i++]);
+      if (Array.isArray(headers)) {
+        wsConsole.print('wscat response headers');
+        while (i < headers.length) {
+          wsConsole.print(headers[i++] + ': ' + headers[i++]);
+        }
       }
-
-      wsConsole.print('');
     }
 
-    wsConsole.print('connected (press CTRL+C to quit)', Console.Colors.Green);
+    // Print newline so prompt appears..
+    wsConsole.print('');
 
     function sendMessage(s) {
       ws.send(s);
@@ -265,7 +266,7 @@ if (program.listen && program.connect) {
     wsConsole.print('error: ' + code + (description ? ' ' + description : ''), Console.Colors.Yellow);
     process.exit(-1);
   }).on('message', function message(data, flags) {
-    wsConsole.print('< ' + data, Console.Colors.Blue);
+    wsConsole.print('< ' + data);
   });
 
   wsConsole.on('close', function close() {
